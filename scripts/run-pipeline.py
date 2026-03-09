@@ -71,6 +71,8 @@ def run_step(
             text=True,
             timeout=timeout,
             env=os.environ,
+            encoding='utf-8',
+            errors='replace'
         )
         elapsed = time.time() - t0
         ok = result.returncode == 0
@@ -79,7 +81,7 @@ def run_step(
         count = 0
         if ok and output_path.exists():
             try:
-                with open(output_path) as f:
+                with open(output_path, encoding='utf-8') as f:
                     data = json.load(f)
                 count = (
                     data.get("total_articles")

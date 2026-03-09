@@ -67,6 +67,7 @@ def _generate_github_app_token(app_id: str, install_id: str, key_file: str) -> s
         result = _sp.run(
             ['openssl', 'dgst', '-sha256', '-sign', tmp_key],
             input=signing_input.encode(), capture_output=True, timeout=10,
+            encoding='utf-8', errors='replace'
         )
         if result.returncode != 0:
             logging.debug(f"openssl sign failed: {result.stderr.decode()}")
