@@ -29,6 +29,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Any
 
+# Force UTF-8 for this process and all subprocess children (GBK cannot encode emoji)
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+if sys.platform == "win32" and sys.stdout.encoding and sys.stdout.encoding.lower().replace("-", "") != "utf8":
+    import io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace"); sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
 SCRIPTS_DIR = Path(__file__).parent
 DEFAULT_TIMEOUT = 180  # per-step timeout in seconds
 
