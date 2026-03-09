@@ -28,7 +28,7 @@ from urllib.error import HTTPError, URLError
 
 TIMEOUT = 10
 MAX_WORKERS = 5
-DEFAULT_MIN_SCORE = 10
+DEFAULT_MIN_SCORE = 15
 DEFAULT_MAX_ARTICLES = 15
 DEFAULT_MAX_CHARS = 2000
 USER_AGENT = "TechDigest/3.0 (article enrichment)"

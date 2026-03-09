@@ -226,7 +226,7 @@ def search_brave(query: str, api_key: str, freshness: Optional[str] = None) -> D
                     'title': result.get('title', ''),
                     'link': result.get('url', ''),
                     'snippet': result.get('description', ''),
-                    'date': datetime.now(timezone.utc).isoformat()  # Search timestamp
+                    'date': result.get('page_age', '') or result.get('age', '') or ''
                 })
                 
         return {

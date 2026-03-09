@@ -23,16 +23,26 @@ from typing import Dict, List, Any, Optional, Set
 from difflib import SequenceMatcher
 from urllib.parse import urlparse
 
-# Quality scoring weights
-SCORE_MULTI_SOURCE = 5      # Article appears in multiple sources
-SCORE_PRIORITY_SOURCE = 3   # From high-priority source
-SCORE_RECENT = 2            # Recent article (< 24h)
-SCORE_ENGAGEMENT_VIRAL = 5   # Viral tweet (1000+ likes or 500+ RTs)
-SCORE_ENGAGEMENT_HIGH = 3    # High engagement (500+ likes or 200+ RTs)
-SCORE_ENGAGEMENT_MED = 2     # Medium engagement (100+ likes or 50+ RTs)
-SCORE_ENGAGEMENT_LOW = 1     # Some engagement (50+ likes or 20+ RTs)
+# Quality scoring weights (range ~0-50+)
+SCORE_MULTI_SOURCE = 8      # Article appears in multiple sources
+SCORE_PRIORITY_SOURCE = 5   # From high-priority source
+SCORE_ENGAGEMENT_VIRAL = 10  # Viral tweet (1000+ likes or 500+ RTs)
+SCORE_ENGAGEMENT_HIGH = 7    # High engagement (500+ likes or 200+ RTs)
+SCORE_ENGAGEMENT_MED = 4     # Medium engagement (100+ likes or 50+ RTs)
+SCORE_ENGAGEMENT_LOW = 2     # Some engagement (50+ likes or 20+ RTs)
+SCORE_BREAKING_NEWS = 5      # Very fresh (<2h) + high engagement
 PENALTY_DUPLICATE = -10     # Duplicate/very similar title
-PENALTY_OLD_REPORT = -5     # Already in previous digest
+PENALTY_OLD_REPORT = -15    # Already in previous digest (graduated, see apply_previous_digest_penalty)
+
+# Clickbait title patterns
+CLICKBAIT_PATTERNS = [
+    re.compile(r"you won't believe", re.IGNORECASE),
+    re.compile(r"shocking", re.IGNORECASE),
+    re.compile(r"\d+\s+reasons?\s+(?:why|to)", re.IGNORECASE),
+    re.compile(r"this is (?:why|how)", re.IGNORECASE),
+    re.compile(r"!!+"),
+    re.compile(r"(?:URGENT|BREAKING)[:\s!]", re.IGNORECASE),
+]
 
 # Deduplication thresholds
 TITLE_SIMILARITY_THRESHOLD = 0.85
@@ -107,29 +117,55 @@ def normalize_url(url: str) -> str:
         return url
 
 
+def recency_score(hours_old: float) -> float:
+    """Graduated recency score — fresher content scores much higher."""
+    if hours_old < 2:
+        return 10.0
+    elif hours_old < 6:
+        return 8.0
+    elif hours_old < 12:
+        return 6.0
+    elif hours_old < 24:
+        return 4.0
+    elif hours_old < 48:
+        return 2.0
+    return 0.0
+
+
+def clickbait_penalty(title: str) -> float:
+    """Penalize clickbait-style titles."""
+    hits = sum(1 for p in CLICKBAIT_PATTERNS if p.search(title))
+    return -3.0 * min(hits, 3)
+
+
 def calculate_base_score(article: Dict[str, Any], source: Dict[str, Any]) -> float:
     """Calculate base quality score for an article."""
     score = 0.0
-    
+
     # Priority source bonus
     if source.get("priority", False):
         score += SCORE_PRIORITY_SOURCE
-        
-    # Recency bonus (< 24 hours)
+
+    # Graduated recency bonus
+    hours_old = None
     try:
-        article_date = datetime.fromisoformat(article["date"].replace('Z', '+00:00'))
-        hours_old = (datetime.now(timezone.utc) - article_date).total_seconds() / 3600
-        if hours_old < 24:
-            score += SCORE_RECENT
+        date_str = article.get("date", "")
+        if date_str:
+            article_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            hours_old = (datetime.now(timezone.utc) - article_date).total_seconds() / 3600
+            if hours_old >= 0:
+                score += recency_score(hours_old)
     except Exception:
         pass
-    
+
     # Twitter engagement bonus (tiered)
+    likes = 0
+    retweets = 0
     if source.get("source_type") == "twitter" and "metrics" in article:
         metrics = article["metrics"]
         likes = metrics.get("like_count", 0)
         retweets = metrics.get("retweet_count", 0)
-        
+
         if likes >= 1000 or retweets >= 500:
             score += SCORE_ENGAGEMENT_VIRAL
         elif likes >= 500 or retweets >= 200:
@@ -142,6 +178,15 @@ def calculate_base_score(article: Dict[str, Any], source: Dict[str, Any]) -> flo
     # RSS from priority sources get extra weight (official blogs, research papers)
     if source.get("source_type") == "rss" and source.get("priority", False):
         score += 2  # Extra priority RSS bonus
+
+    # Breaking news detection: very fresh + high engagement
+    reddit_score = article.get("score", 0)
+    if hours_old is not None and hours_old < 2:
+        if likes > 500 or retweets > 200 or reddit_score > 300:
+            score += SCORE_BREAKING_NEWS
+
+    # Clickbait penalty
+    score += clickbait_penalty(article.get("title", ""))
 
     return score
 
@@ -325,18 +370,19 @@ def merge_article_sources(articles: List[Dict[str, Any]]) -> List[Dict[str, Any]
     return merged
 
 
-def load_previous_digests(archive_dir: Path, days: int = 7) -> Set[str]:
-    """Load titles from previous digests to avoid repeats."""
+def load_previous_digests(archive_dir: Path, days: int = 7) -> Dict[str, datetime]:
+    """Load titles from previous digests with their dates to support graduated penalty."""
     if not archive_dir.exists():
-        return set()
-        
-    seen_titles = set()
+        return {}
+
+    seen_titles: Dict[str, datetime] = {}
     cutoff = datetime.now() - timedelta(days=days)
-    
+
     try:
         for file_path in archive_dir.glob("*.md"):
             # Extract date from filename
             match = re.search(r'(\d{4}-\d{2}-\d{2})', file_path.name)
+            file_date = None
             if match:
                 try:
                     file_date = datetime.strptime(match.group(1), "%Y-%m-%d")
@@ -344,40 +390,110 @@ def load_previous_digests(archive_dir: Path, days: int = 7) -> Set[str]:
                         continue
                 except ValueError:
                     continue
-                    
+
+            if file_date is None:
+                continue
+
             # Extract titles from markdown
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
+
             # Simple title extraction (assumes format like "- [Title](link)")
             for match in re.finditer(r'-\s*\[([^\]]+)\]', content):
                 title = normalize_title(match.group(1))
                 if title:
-                    seen_titles.add(title)
-                    
+                    # Keep the most recent date for each title
+                    if title not in seen_titles or file_date > seen_titles[title]:
+                        seen_titles[title] = file_date
+
     except Exception as e:
         logging.debug(f"Failed to load previous digests: {e}")
-        
+
     logging.info(f"Loaded {len(seen_titles)} titles from previous {days} days")
     return seen_titles
 
 
-def apply_previous_digest_penalty(articles: List[Dict[str, Any]], 
-                                previous_titles: Set[str]) -> List[Dict[str, Any]]:
-    """Apply penalty to articles that appeared in previous digests."""
+def apply_previous_digest_penalty(articles: List[Dict[str, Any]],
+                                previous_titles: Dict[str, datetime]) -> List[Dict[str, Any]]:
+    """Apply graduated penalty to articles that appeared in previous digests.
+
+    Penalty is stronger for more recently published digests:
+      <=1 day ago: -20
+      <=3 days ago: -15
+      >3 days ago: -8
+    """
     if not previous_titles:
         return articles
-        
+
+    now = datetime.now()
     penalized_count = 0
     for article in articles:
         norm_title = normalize_title(article.get("title", ""))
         if norm_title in previous_titles:
-            article["quality_score"] = article.get("quality_score", 0) + PENALTY_OLD_REPORT
+            days_since = (now - previous_titles[norm_title]).days
+            if days_since <= 1:
+                penalty = -20.0
+            elif days_since <= 3:
+                penalty = -15.0
+            else:
+                penalty = -8.0
+            article["quality_score"] = article.get("quality_score", 0) + penalty
             article["in_previous_digest"] = True
             penalized_count += 1
-            
-    logging.info(f"Applied previous digest penalty to {penalized_count} articles")
+
+    logging.info(f"Applied graduated previous digest penalty to {penalized_count} articles")
     return articles
+
+
+def load_topic_definitions(topics_config: Optional[Path]) -> List[Dict[str, Any]]:
+    """Load topic definitions from topics.json for content-based classification."""
+    if not topics_config or not topics_config.exists():
+        return []
+    try:
+        with open(topics_config, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data.get("topics", [])
+    except Exception as e:
+        logging.warning(f"Failed to load topic definitions: {e}")
+        return []
+
+
+def classify_topics(article: Dict[str, Any], topic_definitions: List[Dict[str, Any]]) -> List[str]:
+    """Assign topics based on title + snippet keyword matching.
+
+    Returns list of matched topic IDs. Uses must_include/exclude from topics.json.
+    """
+    text = (article.get("title", "") + " " + article.get("snippet", "")).lower()
+    if not text.strip():
+        return []
+    matched = []
+    for topic_def in topic_definitions:
+        keywords = topic_def.get("search", {}).get("must_include", [])
+        excludes = topic_def.get("search", {}).get("exclude", [])
+        if any(ex.lower() in text for ex in excludes):
+            continue
+        if any(kw.lower() in text for kw in keywords):
+            matched.append(topic_def["id"])
+    return matched
+
+
+def reclassify_articles(articles: List[Dict[str, Any]], topic_definitions: List[Dict[str, Any]]) -> None:
+    """Enrich article topics with content-based classification (in-place).
+
+    Merges content-detected topics with source-assigned topics (union).
+    """
+    if not topic_definitions:
+        return
+    reclassified = 0
+    for article in articles:
+        content_topics = classify_topics(article, topic_definitions)
+        if content_topics:
+            existing = set(article.get("topics", []))
+            merged = existing | set(content_topics)
+            if merged != existing:
+                article["topics"] = list(merged)
+                reclassified += 1
+    logging.info(f"Topic reclassification: {reclassified} articles got additional topics")
 
 
 def group_by_topics(articles: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
@@ -467,6 +583,12 @@ Examples:
     )
     
     parser.add_argument(
+        "--topics-config",
+        type=Path,
+        help="Path to topics.json for content-based topic classification"
+    )
+
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose logging"
@@ -555,9 +677,9 @@ Examples:
                 # Reddit score bonus
                 score = article.get("score", 0)
                 if score > 500:
-                    article["quality_score"] += 5
+                    article["quality_score"] += 10
                 elif score > 200:
-                    article["quality_score"] += 3
+                    article["quality_score"] += 6
                 elif score > 100:
                     article["quality_score"] += 1
                 all_articles.append(article)
@@ -578,12 +700,17 @@ Examples:
                     "daily_stars_est": repo.get("daily_stars_est", 0),
                     "forks": repo.get("forks", 0),
                     "language": repo.get("language", ""),
-                    "quality_score": 5 + min(10, repo.get("daily_stars_est", 0) // 10),
+                    "quality_score": 5 + min(15, repo.get("daily_stars_est", 0) // 5),
                 }
                 all_articles.append(article)
         total_collected = len(all_articles)
         logger.info(f"Total articles collected: {total_collected}")
         
+        # Content-based topic reclassification
+        topic_definitions = load_topic_definitions(args.topics_config)
+        if topic_definitions:
+            reclassify_articles(all_articles, topic_definitions)
+
         # Load previous digest titles for penalty
         previous_titles = set()
         if args.archive_dir:

@@ -223,6 +223,10 @@ def main() -> int:
             merge_args += [flag, str(path)]
     if args.archive_dir:
         merge_args += ["--archive-dir", str(args.archive_dir)]
+    # Pass topics config for content-based topic classification
+    topics_json = args.defaults / "topics.json"
+    if topics_json.exists():
+        merge_args += ["--topics-config", str(topics_json)]
     merge_args += ["--output", str(args.output)]
 
     merge_result = run_step("Merge", "merge-sources.py", merge_args, args.output, timeout=60, force=False)
