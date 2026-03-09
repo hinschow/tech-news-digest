@@ -131,6 +131,8 @@ def main() -> int:
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--force", action="store_true", help="Force re-fetch ignoring caches")
     parser.add_argument("--enrich", action="store_true", help="Enable full-text enrichment for top articles")
+    parser.add_argument("--telegram", action="store_true", help="Send report to Telegram after pipeline completes")
+    parser.add_argument("--coins", action="store_true", help="Include crypto prices in Telegram report")
     parser.add_argument("--skip", type=str, default="", help="Comma-separated list of steps to skip (rss,twitter,github,reddit,web)")
     parser.add_argument("--reuse-dir", type=Path, default=None, help="Reuse existing intermediate directory instead of creating new one")
 
@@ -239,6 +241,16 @@ def main() -> int:
         enrich_result = run_step("Enrich", "enrich-articles.py", enrich_args, args.output, timeout=120, force=False)
     else:
         enrich_result = {"name": "Enrich", "status": "skipped", "elapsed_s": 0, "count": 0, "stderr_tail": []}
+
+    # Phase 4: Send to Telegram
+    telegram_result = {"name": "Telegram", "status": "skipped", "elapsed_s": 0, "count": 0, "stderr_tail": []}
+    if merge_result["status"] == "ok" and args.telegram and "telegram" not in skip_steps:
+        logger.info("📨 Sending report to Telegram...")
+        tg_args = ["--input", str(args.output)]
+        if args.coins:
+            tg_args.append("--coins")
+        tg_args += ["--verbose"] if args.verbose else []
+        telegram_result = run_step("Telegram", "send-telegram.py", tg_args, args.output, timeout=60, force=False)
 
     total_elapsed = time.time() - t_start
 
