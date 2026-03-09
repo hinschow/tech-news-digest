@@ -92,7 +92,7 @@ def main():
         print(f"Error: {args.input} not found. Run the pipeline first.")
         return
     
-    with open(args.input) as f:
+    with open(args.input, encoding='utf-8') as f:
         data = json.load(f)
     
     summarize(data, top_n=args.top, topic_filter=args.topic)
