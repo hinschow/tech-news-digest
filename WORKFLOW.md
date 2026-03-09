@@ -4,7 +4,8 @@
 
 ### 核心理念
 - **数据采集与报告生成分离**：定时采集原始数据到本地，按需生成报告
-- **本地数据优先**：所有数据存储在本地，支持历史分析和二次挖掘
+- **采集即存全文**：每次采集自动抓取文章全文（enrich 默认开启），避免链接过期丢失内容
+- **本地数据优先**：所有数据存储在本地，支持历史分析、AI摘要和二次挖掘
 - **避免遗漏**：高频采集（每小时）确保不错过重要消息
 
 ## 工作流程
@@ -26,6 +27,9 @@ python scripts/run-pipeline.py \
   --output archive/raw-data/$(date +%Y-%m-%d-%H).json \
   --force
 ```
+
+> 注意：全文抓取（enrich）默认开启，无需额外参数。如需禁用可加 `--no-enrich`。
+> enrich 门槛：quality_score >= 3 即抓取全文，单次最多 50 篇，每篇最多 3000 字符。
 
 **输出文件命名**：
 - `archive/raw-data/2026-03-10-08.json` (早上 8 点采集)
@@ -224,10 +228,12 @@ skills/tech-news-digest/
 │       ├── sources.json    # 数据源配置
 │       └── topics.json     # 主题配置
 ├── scripts/
-│   ├── run-pipeline.py     # 数据采集主脚本（已有）
-│   ├── merge-historical.py # 合并历史数据（待开发）
-│   ├── generate-report.py  # 生成报告（待开发）
-│   └── analyze-trends.py   # 趋势分析（待开发）
+│   ├── run-pipeline.py     # 数据采集主脚本（含全文抓取）
+│   ├── merge-historical.py # 合并历史数据（已开发）
+│   ├── generate-report.py  # 生成报告（已开发，支持早报/晚报/周报）
+│   ├── analyze-trends.py   # 趋势分析（已开发）
+│   ├── enrich-articles.py  # 全文抓取（采集时自动调用）
+│   └── send-telegram.py    # Telegram 推送（旧版，generate-report.py 已内置）
 ├── archive/
 │   ├── raw-data/           # 原始数据存储
 │   │   ├── 2026-03-10-08.json
@@ -331,31 +337,38 @@ skills/tech-news-digest/
 - 数据采集在后台静默运行，不影响用户体验
 - 报告生成只在需要时运行，节省资源
 
-## 下一步行动
+## 已完成
 
-1. **开发三个脚本**：
-   - `merge-historical.py`
-   - `generate-report.py`
-   - `analyze-trends.py`
+- [x] `merge-historical.py` — 支持 `--hours`, `--today-only`, `--start-date/--end-date`
+- [x] `generate-report.py` — 支持 morning/evening/weekly 模板，内置 Telegram 推送
+- [x] `analyze-trends.py` — 关键词追踪、主题热力图、热门词排行
+- [x] 目录结构 `archive/raw-data/`, `archive/reports/`, `archive/trends/`
+- [x] `run-pipeline.py` — enrich 默认开启（`--no-enrich` 关闭）
+- [x] `enrich-articles.py` — 门槛降至 score>=3，最多 50 篇，每篇 3000 字
 
-2. **创建目录结构**：
-   ```bash
-   mkdir -p archive/raw-data
-   mkdir -p archive/reports
-   mkdir -p archive/trends
-   ```
+## 使用示例
 
-3. **配置 Cron 任务**：
-   - 数据采集（每小时）
-   - 早报生成（每天 8:00）
-   - 晚报生成（每天 19:00）
+```bash
+# 手动采集一次（含全文）
+python scripts/run-pipeline.py --defaults config/defaults --hours 1 \
+  --output archive/raw-data/$(date +%Y-%m-%d-%H).json --force
 
-4. **测试完整流程**：
-   - 手动运行数据采集
-   - 手动运行报告生成
-   - 验证输出格式
+# 合并过去 24h 数据
+python scripts/merge-historical.py --input-dir archive/raw-data --hours 24 \
+  --output /tmp/morning-merged.json
 
-5. **优化与迭代**：
-   - 根据实际使用情况调整采集频率
-   - 优化报告模板
-   - 添加更多分析功能
+# 生成早报并发送 Telegram
+python scripts/generate-report.py --input /tmp/morning-merged.json \
+  --template morning --telegram --coins
+
+# 生成 Markdown 报告文件
+python scripts/generate-report.py --input /tmp/morning-merged.json \
+  --template morning --output archive/reports/morning-$(date +%Y-%m-%d).md
+
+# 追踪关键词趋势
+python scripts/analyze-trends.py --input-dir archive/raw-data \
+  --keyword "Claude" --days 7 --output archive/trends/claude.json
+
+# 查看热门关键词
+python scripts/analyze-trends.py --input-dir archive/raw-data --days 7
+```
