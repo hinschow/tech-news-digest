@@ -295,19 +295,25 @@ def build_markdown(data: Dict[str, Any], template: str = "morning") -> str:
             for i, article in enumerate(top, 1):
                 title = article.get("title", "")
                 zh_title = translate_to_zh(title)
-                link = article.get("link", "")
                 score = article.get("quality_score", 0)
-                summary_line = f"{i}. **{zh_title}** [{score:.0f}分]"
-                if link:
-                    summary_line += f" — [原文]({link})"
-                lines.append(summary_line)
-                # Include full_text snippet if available
+                
+                # Format: 🔥score | **Title**
+                lines.append(f"🔥{score:.0f} | **{zh_title}**")
+                
+                # Add summary from full_text or summary field
                 full_text = article.get("full_text", "")
+                summary = article.get("summary", "")
+                
                 if full_text:
-                    snippet = full_text[:300].strip()
-                    if len(full_text) > 300:
+                    # Use first 200 chars of full_text as summary
+                    snippet = full_text[:200].strip()
+                    if len(full_text) > 200:
                         snippet += "..."
-                    lines.append(f"   > {snippet}")
+                    lines.append(snippet)
+                elif summary:
+                    # Use existing summary
+                    lines.append(summary)
+                
                 lines.append("")
         else:
             lines.append("- 本轮无更新")
