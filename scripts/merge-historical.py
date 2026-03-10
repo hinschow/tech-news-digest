@@ -31,14 +31,21 @@ def setup_logging(verbose=False):
 
 
 def parse_file_datetime(filename: str) -> Optional[datetime]:
-    """Extract datetime from filename like '2026-03-10-08.json'."""
+    """Extract datetime from filename like '2026-03-10-08.json'.
+    Assumes filename is in local time, converts to UTC for comparison."""
     m = re.match(r"(\d{4}-\d{2}-\d{2}-\d{2})\.json$", filename)
     if m:
-        return datetime.strptime(m.group(1), "%Y-%m-%d-%H").replace(tzinfo=timezone.utc)
+        # Parse as naive datetime, then localize to system timezone
+        dt_naive = datetime.strptime(m.group(1), "%Y-%m-%d-%H")
+        # Convert to UTC (assuming Asia/Shanghai = UTC+8)
+        dt_utc = dt_naive.replace(tzinfo=timezone(timedelta(hours=8))).astimezone(timezone.utc)
+        return dt_utc
     # Also support 'YYYY-MM-DD.json' format
     m = re.match(r"(\d{4}-\d{2}-\d{2})\.json$", filename)
     if m:
-        return datetime.strptime(m.group(1), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        dt_naive = datetime.strptime(m.group(1), "%Y-%m-%d")
+        dt_utc = dt_naive.replace(tzinfo=timezone(timedelta(hours=8))).astimezone(timezone.utc)
+        return dt_utc
     return None
 
 
