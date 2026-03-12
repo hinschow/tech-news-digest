@@ -44,8 +44,8 @@ TOPIC_DISPLAY = {
     "military-defense": ("⚔️", "军事国防"),
 }
 
-COINS = ["bitcoin", "ethereum", "solana", "binancecoin", "ripple"]
-SYMBOL = {"bitcoin": "BTC", "ethereum": "ETH", "solana": "SOL", "binancecoin": "BNB", "ripple": "XRP"}
+COINS = ["bitcoin", "ethereum", "solana", "binancecoin", "ripple", "dogecoin"]
+SYMBOL = {"bitcoin": "BTC", "ethereum": "ETH", "solana": "SOL", "binancecoin": "BNB", "ripple": "XRP", "dogecoin": "DOGE"}
 
 _translate_cache: Dict[str, str] = {}
 
@@ -101,17 +101,42 @@ def translate_to_zh(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 def collect_coins() -> List[str]:
+    """Fetch coin prices with CNY conversion, openclaw-sync style."""
     ids = ",".join(COINS)
     data = _get_json(f"https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies=usd&include_24hr_change=true")
     rows: List[str] = []
     if not isinstance(data, dict):
         return rows
+    # Get CNY rate
+    rate_data = _get_json("https://api.exchangerate-api.com/v4/latest/USD")
+    cny_rate = 7.25
+    if isinstance(rate_data, dict) and "rates" in rate_data:
+        cny_rate = rate_data["rates"].get("CNY", 7.25)
     for coin in COINS:
         d = data.get(coin, {})
-        price = d.get("usd", "n/a")
+        price = d.get("usd")
+        if price is None:
+            continue
         chg = d.get("usd_24h_change")
-        chg_s = "n/a" if chg is None else f"{chg:+.2f}%"
-        rows.append(f"{SYMBOL[coin]} ${price} ({chg_s})")
+        arrow = "🟢" if (chg or 0) >= 0 else "🔴"
+        chg_s = "--" if chg is None else f"{chg:+.2f}%"
+        cny = price * cny_rate
+        if price >= 1:
+            rows.append(f"{arrow} {SYMBOL[coin]} ${price:,.2f} / ¥{cny:,.0f} ({chg_s})")
+        else:
+            rows.append(f"{arrow} {SYMBOL[coin]} ${price:.4f} / ¥{cny:.2f} ({chg_s})")
+    # Gold price via CoinGecko BTC/XAU
+    try:
+        xau_data = _get_json("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,xau")
+        if isinstance(xau_data, dict) and "bitcoin" in xau_data:
+            btc_usd = xau_data["bitcoin"].get("usd", 0)
+            btc_xau = xau_data["bitcoin"].get("xau", 0)
+            if btc_xau and btc_usd:
+                gold = btc_usd / btc_xau
+                rows.append(f"🥇 黄金 ${gold:,.0f}/oz / ¥{gold * cny_rate:,.0f}/oz")
+    except Exception:
+        pass
+    rows.append(f"💱 汇率 1 USD = ¥{cny_rate:.2f}")
     return rows
 
 
@@ -159,63 +184,70 @@ def build_report(data: Dict[str, Any], template: str = "morning", include_coins:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     topics = data.get("topics", {})
     stats = data.get("output_stats", {})
-    time_range = data.get("time_range", {})
 
-    lines: List[str] = [
-        f"🦞 科技新闻{cfg['label']}",
-        f"时间：{now} · 共 {stats.get('total_articles', 0)} 条",
-        "━━━━━━━━━━━━",
-        "【1) 今日重点】",
-    ]
+    label = cfg["label"]
+    lines: List[str] = [f"🧠 科技新闻{label} | {now}", ""]
 
-    # Key picks: top 1 per category
-    key_picks: List[str] = []
+    # -- 行情速览 (placed first like openclaw-sync) --
+    if include_coins:
+        lines.append("💰 行情速览")
+        coins = collect_coins()
+        if coins:
+            for c in coins:
+                lines.append(f"  {c}")
+        else:
+            lines.append("  ⚠️ 行情接口暂不可用")
+        lines.append("")
+
+    # -- 今日重点: top 1 per category --
+    lines.append("📌 今日重点")
+    has_picks = False
     for topic_id, (emoji, cat_name) in TOPIC_DISPLAY.items():
         topic_data = topics.get(topic_id, {})
         top = _get_top_articles(topic_data, 1)
         if top:
             title = translate_to_zh(top[0].get("title", ""))
-            key_picks.append(f"{emoji} {cat_name}：{title}")
-    if key_picks:
-        for i, pick in enumerate(key_picks, 1):
-            lines.append(f"{i}. {pick}")
-    else:
-        lines.append("- 本轮源更新较少")
+            lines.append(f"  {emoji} {cat_name}：{title}")
+            has_picks = True
+    if not has_picks:
+        lines.append("  本轮源更新较少")
+    lines.append("")
 
-    # Category details
-    lines += ["", "━━━━━━━━━━━━", "【2) 板块明细】"]
-    labels = [chr(ord("A") + i) for i in range(cfg["top_n"])]
-    for idx, (topic_id, (emoji, cat_name)) in enumerate(TOPIC_DISPLAY.items(), 1):
-        topic_data = topics.get(topic_id, {})
-        top = _get_top_articles(topic_data, cfg["top_n"])
-        lines.append(f"{idx}. {emoji} {cat_name}")
-        if top:
-            for i, article in enumerate(top):
-                title = translate_to_zh(article.get("title", ""))
-                score = article.get("quality_score", 0)
-                lbl = labels[i] if i < len(labels) else str(i + 1)
-                lines.append(f"   {lbl}. {title} [{score:.0f}分]")
-        else:
-            lines.append("   - 本轮无更新")
+    # -- Category sections --
+    # Group related topics for cleaner layout
+    SECTION_GROUPS = [
+        ("🤖 AI 前沿", ["llm", "ai-agent"]),
+        ("🪙 区块链", ["crypto", "market-prices"]),
+        ("🔬 前沿科技", ["frontier-tech"]),
+        ("🌍 国际要闻", ["international-news"]),
+        ("🇨🇳 国内动态", ["china-news"]),
+        ("⚔️ 军事国防", ["military-defense"]),
+    ]
 
-    # AI focus
-    lines += ["", "━━━━━━━━━━━━", "【3) AI 焦点】"]
-    ai_articles = []
-    for tid in ("llm", "ai-agent"):
-        ai_articles.extend(_get_top_articles(topics.get(tid, {}), cfg["ai_n"]))
-    seen = set()
-    unique_ai = []
-    for a in sorted(ai_articles, key=lambda x: x.get("quality_score", 0), reverse=True):
-        t = a.get("title", "")
-        if t not in seen:
-            seen.add(t)
-            unique_ai.append(a)
-    for i, article in enumerate(unique_ai[:cfg["ai_n"]], 1):
-        title = translate_to_zh(article.get("title", ""))
-        lines.append(f"{i}. {title}")
+    for section_title, topic_ids in SECTION_GROUPS:
+        # Collect articles from all topics in this group
+        all_articles = []
+        for tid in topic_ids:
+            all_articles.extend(_get_top_articles(topics.get(tid, {}), cfg["top_n"]))
+        # Deduplicate by title
+        seen = set()
+        unique = []
+        for a in sorted(all_articles, key=lambda x: x.get("quality_score", 0), reverse=True):
+            t = a.get("title", "")
+            if t not in seen:
+                seen.add(t)
+                unique.append(a)
+        if not unique:
+            continue
+        lines.append(section_title)
+        for a in unique[:cfg["top_n"]]:
+            title = translate_to_zh(a.get("title", ""))
+            sources = a.get("source_count", 1)
+            src_str = f" [{sources}源]" if sources > 1 else ""
+            lines.append(f"  • {title}{src_str}")
+        lines.append("")
 
-    # GitHub trending
-    lines += ["", "━━━━━━━━━━━━", "【4) GitHub 热门项目】"]
+    # -- GitHub trending --
     gh_articles = []
     for topic_data in topics.values():
         if isinstance(topic_data, dict):
@@ -230,27 +262,15 @@ def build_report(data: Dict[str, Any], template: str = "morning", include_coins:
             seen_gh.add(link)
             unique_gh.append(a)
     if unique_gh:
-        for i, a in enumerate(unique_gh[:cfg["gh_n"]], 1):
+        lines.append("💻 GitHub 热门")
+        for a in unique_gh[:cfg["gh_n"]]:
             title = a.get("title", "")
             stars = a.get("stars", 0) or a.get("daily_stars_est", 0)
-            star_str = f"（⭐{stars}）" if stars else ""
-            lines.append(f"{i}. {title}{star_str}")
-    else:
-        lines.append("- GitHub 热门源本轮更新较少")
+            star_str = f" ⭐{stars}" if stars else ""
+            lines.append(f"  • {title}{star_str}")
+        lines.append("")
 
-    # Crypto
-    if include_coins:
-        lines += ["", "━━━━━━━━━━━━", "【5) 代币行情】"]
-        coins = collect_coins()
-        if coins:
-            for c in coins:
-                lines.append(f"- {c}")
-        else:
-            lines.append("- 行情接口暂不可用")
-
-    # Hot topics
-    section_n = 6 if include_coins else 5
-    lines += ["", "━━━━━━━━━━━━", f"【{section_n}) 热议话题】"]
+    # -- Hot topics (multi-source) --
     hot = []
     for topic_data in topics.values():
         if isinstance(topic_data, dict):
@@ -265,15 +285,15 @@ def build_report(data: Dict[str, Any], template: str = "morning", include_coins:
             seen_hot.add(t)
             unique_hot.append(a)
     if unique_hot:
-        for i, a in enumerate(unique_hot[:cfg["hot_n"]], 1):
+        lines.append("🔥 热议话题")
+        for a in unique_hot[:cfg["hot_n"]]:
             title = translate_to_zh(a.get("title", ""))
             sources = a.get("source_count", 1)
             src_str = f" [{sources}源]" if sources > 1 else ""
-            lines.append(f"{i}. {title}{src_str}")
-    else:
-        lines.append("- 本轮无多源热议话题")
+            lines.append(f"  • {title}{src_str}")
+        lines.append("")
 
-    lines += ["", "━━━━━━━━━━━━", "📊 数据来源：RSS/Twitter/GitHub/Reddit/Web"]
+    lines.append(f"📊 共采集 {stats.get('total_articles', 0)} 条 | RSS/Twitter/GitHub/Reddit/Web")
 
     return "\n".join(lines)
 
