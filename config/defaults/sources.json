@@ -144,7 +144,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Ethereum founder"
     },
@@ -156,7 +157,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Major crypto news"
     },
@@ -168,7 +170,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Crypto news"
     },
@@ -180,7 +183,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Crypto and web3 news"
     },
@@ -192,7 +196,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Crypto news and analysis"
     },
@@ -351,7 +356,10 @@
       "priority": true,
       "topics": [
         "frontier-tech",
-        "crypto"
+        "crypto",
+        "market-prices",
+        "china-news",
+        "international-news"
       ],
       "note": "中文科技媒体"
     },
@@ -614,7 +622,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Ethereum founder"
     },
@@ -626,7 +635,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Binance"
     },
@@ -638,7 +648,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Coinbase"
     },
@@ -650,7 +661,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "MicroStrategy"
     },
@@ -662,7 +674,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Crypto influencer"
     },
@@ -674,7 +687,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "on-chain investigator"
     },
@@ -686,7 +700,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "吴说区块链"
     },
@@ -698,7 +713,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "F2Pool/Cobo co-founder"
     },
@@ -710,7 +726,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "dForce founder"
     },
@@ -722,7 +739,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "PANews founder"
     },
@@ -759,7 +777,8 @@
       "priority": false,
       "topics": [
         "frontier-tech",
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "a16z"
     },
@@ -897,7 +916,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Crypto research reports"
     },
@@ -909,7 +929,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "DeFi professional media"
     },
@@ -1059,7 +1080,8 @@
       "priority": true,
       "topics": [
         "crypto",
-        "frontier-tech"
+        "frontier-tech",
+        "market-prices"
       ],
       "note": "Former Coinbase CTO, macro thinker"
     },
@@ -1071,7 +1093,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Influential independent crypto analyst"
     },
@@ -1083,7 +1106,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Crypto trading analysis"
     },
@@ -1095,7 +1119,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Cinneamhain Ventures, on-chain analysis"
     },
@@ -1107,7 +1132,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "The Block research director"
     },
@@ -1264,7 +1290,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Official Go implementation of Ethereum"
     },
@@ -1276,7 +1303,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Ethereum smart contract programming language"
     },
@@ -1288,7 +1316,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Fast, portable and modular Ethereum toolkit"
     },
@@ -1300,7 +1329,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "Ethereum Improvement Proposals repository"
     },
@@ -1372,7 +1402,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ]
     },
     {
@@ -1383,7 +1414,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ]
     },
     {
@@ -1495,7 +1527,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ]
     },
     {
@@ -1524,7 +1557,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ]
     },
     {
@@ -1582,7 +1616,8 @@
       "enabled": true,
       "priority": true,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ]
     },
     {
@@ -1598,7 +1633,8 @@
       "topics": [
         "llm",
         "ai-agent",
-        "crypto"
+        "crypto",
+        "market-prices"
       ]
     },
     {
@@ -1627,7 +1663,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ]
     },
     {
@@ -1738,7 +1775,8 @@
       "enabled": true,
       "priority": false,
       "topics": [
-        "crypto"
+        "crypto",
+        "market-prices"
       ],
       "note": "ZeroClaw Labs project"
     },
