@@ -29,9 +29,9 @@ MAX_TELEGRAM_LEN = 3900
 
 # Template configs: (top_n per topic, ai_focus_n, github_n, hot_n)
 TEMPLATES = {
-    "morning": {"top_n": 8, "ai_n": 10, "gh_n": 8, "hot_n": 10, "label": "早报"},
-    "evening": {"top_n": 10, "ai_n": 15, "gh_n": 12, "hot_n": 15, "label": "晚报"},
-    "weekly":  {"top_n": 15, "ai_n": 20, "gh_n": 15, "hot_n": 20, "label": "周报"},
+    "morning": {"top_n": 15, "ai_n": 15, "gh_n": 12, "hot_n": 15, "label": "早报"},
+    "evening": {"top_n": 20, "ai_n": 20, "gh_n": 15, "hot_n": 20, "label": "晚报"},
+    "weekly":  {"top_n": 25, "ai_n": 30, "gh_n": 20, "hot_n": 25, "label": "周报"},
 }
 
 TOPIC_DISPLAY = {

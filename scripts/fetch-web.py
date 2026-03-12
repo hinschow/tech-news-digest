@@ -31,7 +31,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 
 TIMEOUT = 30
-MAX_RESULTS_PER_QUERY = 5
+MAX_RESULTS_PER_QUERY = 10
 RETRY_COUNT = 1
 RETRY_DELAY = 2.0
 

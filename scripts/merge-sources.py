@@ -34,7 +34,7 @@ SCORE_ENGAGEMENT_MED = 4     # Medium engagement (100+ likes or 50+ RTs)
 SCORE_ENGAGEMENT_LOW = 2     # Some engagement (50+ likes or 20+ RTs)
 SCORE_BREAKING_NEWS = 5      # Very fresh (<2h) + high engagement
 PENALTY_DUPLICATE = -10     # Duplicate/very similar title
-PENALTY_OLD_REPORT = -15    # Already in previous digest (graduated, see apply_previous_digest_penalty)
+PENALTY_OLD_REPORT = -8     # Already in previous digest (graduated, see apply_previous_digest_penalty)
 
 # Clickbait title patterns
 CLICKBAIT_PATTERNS = [
@@ -47,7 +47,7 @@ CLICKBAIT_PATTERNS = [
 ]
 
 # Deduplication thresholds
-TITLE_SIMILARITY_THRESHOLD = 0.85
+TITLE_SIMILARITY_THRESHOLD = 0.90
 DOMAIN_DUPLICATE_THRESHOLD = 0.95
 
 
@@ -312,7 +312,7 @@ def deduplicate_articles(articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 # Domains exempt from per-topic limits (multi-author platforms)
 DOMAIN_LIMIT_EXEMPT = {"x.com", "twitter.com", "github.com", "reddit.com"}
 
-def apply_domain_limits(articles: List[Dict[str, Any]], max_per_domain: int = 3) -> List[Dict[str, Any]]:
+def apply_domain_limits(articles: List[Dict[str, Any]], max_per_domain: int = 5) -> List[Dict[str, Any]]:
     """Limit articles per domain within a single topic group.
     
     Should be called per-topic after group_by_topics() to ensure
@@ -420,9 +420,9 @@ def apply_previous_digest_penalty(articles: List[Dict[str, Any]],
     """Apply graduated penalty to articles that appeared in previous digests.
 
     Penalty is stronger for more recently published digests:
-      <=1 day ago: -20
-      <=3 days ago: -15
-      >3 days ago: -8
+      <=1 day ago: -8
+      <=3 days ago: -5
+      >3 days ago: -3
     """
     if not previous_titles:
         return articles
@@ -434,11 +434,11 @@ def apply_previous_digest_penalty(articles: List[Dict[str, Any]],
         if norm_title in previous_titles:
             days_since = (now - previous_titles[norm_title]).days
             if days_since <= 1:
-                penalty = -20.0
-            elif days_since <= 3:
-                penalty = -15.0
-            else:
                 penalty = -8.0
+            elif days_since <= 3:
+                penalty = -5.0
+            else:
+                penalty = -3.0
             article["quality_score"] = article.get("quality_score", 0) + penalty
             article["in_previous_digest"] = True
             penalized_count += 1
