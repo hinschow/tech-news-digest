@@ -5,3 +5,12 @@ archive/raw-data/
 archive/reports/
 archive/trends/
 /tmp/
+
+# Temp test/debug files
+test-*
+merged-*.json
+digest-*.json
+digest-*.meta.json
+morning-*.md
+*-report*.md
+_meta.json
