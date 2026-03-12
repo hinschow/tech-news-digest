@@ -1,7 +1,7 @@
 {
   "_description": "Enhanced topic definitions for tech digest. Each topic defines a report section with search queries, filters, and display preferences.",
-  "_updated": "2026-02-15",
-  "_version": "2.5.0",
+  "_updated": "2026-03-12",
+  "_version": "2.6.0",
   "topics": [
     {
       "id": "llm",
@@ -65,6 +65,70 @@
       "display": {
         "max_items": 8,
         "style": "detailed"
+      }
+    },
+    {
+      "id": "market-prices",
+      "emoji": "📊",
+      "label": "Market Prices",
+      "description": "Cryptocurrency prices (BTC, ETH, SOL, BNB, RATS), gold, silver, and major commodity prices",
+      "search": {
+        "queries": ["bitcoin price today", "ethereum price", "RATS token price", "gold silver price", "加密货币行情", "黄金白银价格", "RATS代币"],
+        "twitter_queries": ["BTC price", "ETH price", "RATS token", "gold price"],
+        "must_include": ["price", "market", "trading", "行情", "价格", "RATS"],
+        "exclude": ["prediction", "forecast", "pump"]
+      },
+      "display": {
+        "max_items": 10,
+        "style": "detailed"
+      }
+    },
+    {
+      "id": "international-news",
+      "emoji": "🌍",
+      "label": "International News",
+      "description": "Major international events, geopolitics, global economy, and world affairs",
+      "search": {
+        "queries": ["international news today", "world news breaking", "国际新闻", "全球要闻"],
+        "twitter_queries": ["breaking news", "world news", "国际"],
+        "must_include": ["international", "global", "world", "国际", "全球"],
+        "exclude": ["gossip", "celebrity", "entertainment"]
+      },
+      "display": {
+        "max_items": 6,
+        "style": "compact"
+      }
+    },
+    {
+      "id": "china-news",
+      "emoji": "🇨🇳",
+      "label": "China News",
+      "description": "Major domestic news, policy updates, economy, and social developments in China",
+      "search": {
+        "queries": ["中国新闻", "国内要闻", "中国经济", "政策动态"],
+        "twitter_queries": ["中国", "国内"],
+        "must_include": ["中国", "国内", "China domestic"],
+        "exclude": ["gossip", "八卦", "娱乐"]
+      },
+      "display": {
+        "max_items": 6,
+        "style": "compact"
+      }
+    },
+    {
+      "id": "military-defense",
+      "emoji": "⚔️",
+      "label": "Military & Defense",
+      "description": "Military developments, defense technology, geopolitical tensions, and security affairs",
+      "search": {
+        "queries": ["military news today", "defense technology", "军事新闻", "国防动态"],
+        "twitter_queries": ["military", "defense", "军事"],
+        "must_include": ["military", "defense", "army", "navy", "air force", "军事", "国防"],
+        "exclude": ["game", "游戏", "fiction"]
+      },
+      "display": {
+        "max_items": 5,
+        "style": "compact"
       }
     }
   ]

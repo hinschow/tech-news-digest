@@ -29,9 +29,9 @@ MAX_TELEGRAM_LEN = 3900
 
 # Template configs: (top_n per topic, ai_focus_n, github_n, hot_n)
 TEMPLATES = {
-    "morning": {"top_n": 3, "ai_n": 5, "gh_n": 5, "hot_n": 5, "label": "早报"},
-    "evening": {"top_n": 5, "ai_n": 8, "gh_n": 8, "hot_n": 8, "label": "晚报"},
-    "weekly":  {"top_n": 10, "ai_n": 15, "gh_n": 10, "hot_n": 10, "label": "周报"},
+    "morning": {"top_n": 8, "ai_n": 10, "gh_n": 8, "hot_n": 10, "label": "早报"},
+    "evening": {"top_n": 10, "ai_n": 15, "gh_n": 12, "hot_n": 15, "label": "晚报"},
+    "weekly":  {"top_n": 15, "ai_n": 20, "gh_n": 15, "hot_n": 20, "label": "周报"},
 }
 
 TOPIC_DISPLAY = {
@@ -39,6 +39,10 @@ TOPIC_DISPLAY = {
     "ai-agent": ("🤖", "AI Agent"),
     "crypto": ("💰", "区块链"),
     "frontier-tech": ("🔬", "前沿科技"),
+    "market-prices": ("📊", "市场行情"),
+    "international-news": ("🌍", "国际新闻"),
+    "china-news": ("🇨🇳", "国内新闻"),
+    "military-defense": ("⚔️", "军事国防"),
 }
 
 COINS = ["bitcoin", "ethereum", "solana", "binancecoin", "ripple"]
@@ -116,10 +120,37 @@ def collect_coins() -> List[str]:
 # Report building
 # ---------------------------------------------------------------------------
 
+def _is_valid_title(title: str) -> bool:
+    """Check if title is valid (not too short, not just emojis/symbols)"""
+    if not title or len(title) < 5:
+        return False
+    
+    # Only reject obvious spam/profanity
+    bad_patterns = [
+        '这个小屎', 'this little shit', '😭😭😭', '🤣🤣🤣'
+    ]
+    title_lower = title.lower()
+    if any(p in title_lower for p in bad_patterns):
+        return False
+    
+    # Count actual characters (exclude emojis and symbols) - relaxed threshold
+    chars = re.findall(r'[\u4e00-\u9fffA-Za-z0-9]', title)
+    if len(chars) < 5:
+        return False
+    
+    # Allow more emojis
+    emoji_count = len(re.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]', title))
+    if emoji_count > 5:
+        return False
+    
+    return True
+
 def _get_top_articles(topic_data: Dict[str, Any], n: int) -> List[Dict[str, Any]]:
     articles = topic_data.get("articles", [])
-    articles.sort(key=lambda x: x.get("quality_score", 0), reverse=True)
-    return articles[:n]
+    # Filter out invalid titles
+    valid_articles = [a for a in articles if _is_valid_title(a.get("title", ""))]
+    valid_articles.sort(key=lambda x: x.get("quality_score", 0), reverse=True)
+    return valid_articles[:n]
 
 
 def build_report(data: Dict[str, Any], template: str = "morning", include_coins: bool = False) -> str:
