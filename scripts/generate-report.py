@@ -39,7 +39,6 @@ TOPIC_DISPLAY = {
     "ai-agent": ("🤖", "AI Agent"),
     "crypto": ("💰", "区块链"),
     "frontier-tech": ("🔬", "前沿科技"),
-    "market-prices": ("📊", "市场行情"),
     "international-news": ("🌍", "国际新闻"),
     "china-news": ("🇨🇳", "国内新闻"),
     "military-defense": ("⚔️", "军事国防"),
@@ -125,9 +124,11 @@ def _is_valid_title(title: str) -> bool:
     if not title or len(title) < 5:
         return False
     
-    # Only reject obvious spam/profanity
+    # Reject obvious spam/profanity and low-quality patterns
     bad_patterns = [
-        '这个小屎', 'this little shit', '😭😭😭', '🤣🤣🤣'
+        '这个小屎', 'this little shit', '😭😭😭', '🤣🤣🤣',
+        '我累了', '可笑的是', '确实有人', '吸一口气',
+        'i\'m tired', 'ridiculous that', 'literally someone'
     ]
     title_lower = title.lower()
     if any(p in title_lower for p in bad_patterns):
@@ -303,7 +304,7 @@ def send_telegram(token: str, chat_id: str, text: str) -> None:
 # Markdown file output
 # ---------------------------------------------------------------------------
 
-def build_markdown(data: Dict[str, Any], template: str = "morning") -> str:
+def build_markdown(data: Dict[str, Any], template: str = "morning", include_coins: bool = False) -> str:
     """Generate a full Markdown report (for file output, no char limit)."""
     cfg = TEMPLATES.get(template, TEMPLATES["morning"])
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -350,6 +351,18 @@ def build_markdown(data: Dict[str, Any], template: str = "morning") -> str:
             lines.append("- 本轮无更新")
             lines.append("")
 
+    # Add crypto prices if requested
+    if include_coins:
+        lines.append("## 💰 代币行情")
+        lines.append("")
+        coins = collect_coins()
+        if coins:
+            for c in coins:
+                lines.append(f"- {c}")
+        else:
+            lines.append("- 行情接口暂不可用")
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -381,7 +394,7 @@ def main():
 
         # Generate Markdown file if --output specified
         if args.output:
-            md = build_markdown(data, args.template)
+            md = build_markdown(data, args.template, include_coins=args.coins)
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(md)
             logger.info(f"✅ Report saved to {args.output}")

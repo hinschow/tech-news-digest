@@ -1,7 +1,7 @@
 {
   "_description": "Enhanced topic definitions for tech digest. Each topic defines a report section with search queries, filters, and display preferences.",
   "_updated": "2026-03-12",
-  "_version": "2.6.0",
+  "_version": "2.7.0",
   "topics": [
     {
       "id": "llm",
@@ -64,22 +64,6 @@
       },
       "display": {
         "max_items": 8,
-        "style": "detailed"
-      }
-    },
-    {
-      "id": "market-prices",
-      "emoji": "📊",
-      "label": "Market Prices",
-      "description": "Cryptocurrency prices (BTC, ETH, SOL, BNB, RATS), gold, silver, and major commodity prices",
-      "search": {
-        "queries": ["bitcoin price today", "ethereum price", "RATS token price", "gold silver price", "加密货币行情", "黄金白银价格", "RATS代币"],
-        "twitter_queries": ["BTC price", "ETH price", "RATS token", "gold price"],
-        "must_include": ["price", "market", "trading", "行情", "价格", "RATS"],
-        "exclude": ["prediction", "forecast", "pump"]
-      },
-      "display": {
-        "max_items": 10,
         "style": "detailed"
       }
     },
